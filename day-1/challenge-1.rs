@@ -54,7 +54,6 @@ fn main() {
     if current_accumulated_score > maximum {
         maximum = current_accumulated_score;
     }
-    current_accumulated_score = 0;
 
     // Print out the maximum
     println!("The maximum calorie count is {}", maximum);
