@@ -82,15 +82,16 @@ fn main() {
         if let Ok(line) = line {
             // Parse line with regex
             if let Some(cap) = re.captures(&line) {
-                let mut count = cap[1].parse::<u32>().expect("Could not parse crate count");
+                let mut count = cap[1].parse::<usize>().expect("Could not parse crate count");
                 let from = cap[2].parse::<usize>().expect("Could not parse stack index");
                 let to = cap[3].parse::<usize>().expect("Could not parse stack index");
 
-                while count > 0 {
-                    let c = stacks[from - 1].pop().expect("Stack is empty");
-                    stacks[to - 1].push(c);
-                    count -= 1;
-                }
+                let mut from_stack = &mut stacks[from - 1];
+                let stack_height = from_stack.len();
+                let mut moving = from_stack.split_off(stack_height - count);
+
+                let mut to_stack = &mut stacks[to - 1];
+                to_stack.append(&mut moving);
             }
         }
     }
