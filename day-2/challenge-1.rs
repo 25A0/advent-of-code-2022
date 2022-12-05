@@ -14,33 +14,32 @@ use std::path::Path;
 use std::io::{self, BufRead};
 use std::cmp::Ordering;
 
-#[derive(PartialEq, Eq, Ord)]
 enum Shape {
     Rock,
     Paper,
     Scissor,
 }
 
-// Define how shapes are ordered
-impl PartialOrd for Shape {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match self {
-            Shape::Rock => match other {
-                Shape::Scissor => Some(Ordering::Greater),
-                Shape::Paper => Some(Ordering::Less),
-                Shape::Rock => Some(Ordering::Equal),
-            },
-            Shape::Paper => match other {
-                Shape::Rock => Some(Ordering::Greater),
-                Shape::Scissor => Some(Ordering::Less),
-                Shape::Paper => Some(Ordering::Equal),
-            },
-            Shape::Scissor => match other {
-                Shape::Paper => Some(Ordering::Greater),
-                Shape::Rock => Some(Ordering::Less),
-                Shape::Scissor => Some(Ordering::Equal),
-            },
-        }
+// Define how shapes are ordered. I'm not using Rust's Ord here
+// because I believe that's only meant for transitive ordering,
+// which isn't the case for rock-paper-scissor.
+fn cmp(our_shape: Shape, their_shape: Shape) -> Ordering {
+    match our_shape {
+        Shape::Rock => match their_shape {
+            Shape::Scissor => Ordering::Greater,
+            Shape::Paper => Ordering::Less,
+            Shape::Rock => Ordering::Equal,
+        },
+        Shape::Paper => match their_shape {
+            Shape::Rock => Ordering::Greater,
+            Shape::Scissor => Ordering::Less,
+            Shape::Paper => Ordering::Equal,
+        },
+        Shape::Scissor => match their_shape {
+            Shape::Paper => Ordering::Greater,
+            Shape::Rock => Ordering::Less,
+            Shape::Scissor => Ordering::Equal,
+        },
     }
 }
 
@@ -52,7 +51,7 @@ fn score_round(their_move: Shape, our_move: Shape) -> u32 {
         Shape::Scissor => 3,
     };
 
-    let round_score = match our_move.cmp(&their_move) {
+    let round_score = match cmp(our_move, their_move) {
         Ordering::Greater => 6,
         Ordering::Equal => 3,
         Ordering::Less => 0,
@@ -62,10 +61,6 @@ fn score_round(their_move: Shape, our_move: Shape) -> u32 {
 }
 
 fn main() {
-    assert!(Shape::Rock > Shape::Scissor);
-    assert!(Shape::Scissor > Shape::Paper);
-    assert!(Shape::Paper > Shape::Rock);
-
     let mut total_score = 0;
 
     let path = Path::new("input.txt");
