@@ -16,7 +16,7 @@ fn is_start_of_packet_marker(ring_buf: &Vec<char>) -> bool {
     for c in ring_buf {
         set.insert(c);
     }
-    return set.len() == 4;
+    return set.len() == 14;
 }
 
 fn main() {
@@ -38,7 +38,7 @@ fn main() {
             for c in line.chars() {
                 n_chars += 1;
                 ring_buf.push(c);
-                if ring_buf.len() > 4 {
+                if ring_buf.len() > 14 {
                     // Remove the first elements
                     ring_buf.remove(0);
                     if is_start_of_packet_marker(&ring_buf) {
