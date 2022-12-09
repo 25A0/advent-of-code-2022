@@ -10,17 +10,18 @@ use std::path::Path;
 use std::io::{self, BufRead};
 use std::collections::HashSet;
 
-enum Node<'a> {
+struct Node<'a> {
+    name: &'a str,
+    parent: Option<&'a Node<'a>>,
+    next_sibling: Option<&'a Node<'a>>,
+    node_content: NodeContent<'a>,
+}
+
+enum NodeContent<'a> {
     File {
-        name: String,
-        parent: Option<&'a Node<'a>>,
-        next_sibling: Option<&'a Node<'a>>,
         size: usize,
     },
     Directory {
-        name: String,
-        parent: Option<&'a Node<'a>>,
-        next_sibling: Option<&'a Node<'a>>,
         first_child: Option<&'a Node<'a>>,
         // last_child: Option<Node>,
     },
@@ -30,44 +31,37 @@ impl<'a> Iterator for Node<'a> {
     type Item = &'a Node<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Node::File{name, parent, next_sibling, size} => {
-                if let Some(node) = self.next_sibling {
-                    return Some(node)
-                }
-                return self.parent
-            },
-            Node::Directory{name, parent, next_sibling, first_child} => {
-                // If this directory has children then iterate
-                // over those children first
-                if let Some(node) = self.first_child {
-                    return Some(&node)
-                }
-                // Otherwise iterate to the next sibling of this node
-                // if there is such a sibling
-                if let Some(node) = self.next_sibling {
-                    return Some(node)
-                }
-                // Otherwise return to the parent level
-                return self.parent
-            },
+        // If this is a directory then iterate through its children first,
+        // if there are any
+        if let NodeContent::Directory {first_child} = self.node_content {
+            if let Some(node) = first_child {
+                return Some(node);
+            }
         }
+
+        // Otherwise iterate to the next sibling of this node
+        // if there is such a sibling
+        if let Some(node) = self.next_sibling {
+            return Some(node);
+        }
+        // Otherwise return to the parent level
+        return self.parent;
     }
 }
 
 impl Node<'_> {
     fn total_size(&self) -> usize {
-        match self {
-            Node::File { name, parent, next_sibling, size } => self.size,
-            Node::Directory { name, parent, next_sibling, first_child } => {
-                let total_size = 0;
+        match self.node_content {
+            NodeContent::File { size } => size,
+            NodeContent::Directory { first_child } => {
+                let mut total_size = 0;
 
-                let child = self.first_child;
+                let mut child = first_child;
                 loop {
                     match child {
                         Some(node) => {
-                            total_size += child.total_size();
-                            child = child.next_sibling;
+                            total_size += node.total_size();
+                            child = node.next_sibling;
                         },
                         None => break,
                     }
@@ -89,10 +83,13 @@ fn main() {
 
     // Build a file tree
 
-    let tree = Node::Directory {
+    let tree = Node {
         name: "/",
         next_sibling: None,
-        first_child: None,
+        parent: None,
+        node_content: NodeContent::Directory {
+            first_child: None,
+        }
     };
 
     let path = Path::new("input.txt");
