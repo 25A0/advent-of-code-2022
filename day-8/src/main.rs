@@ -11,11 +11,11 @@
 use std::fs::File;
 use std::path::Path;
 use std::io::{self, BufRead};
-use std::collections::HashSet;
 
 
 struct Map {
     data: Vec<u32>,
+    visible: Vec<bool>,
     width: usize,
     height: usize,
 }
@@ -33,13 +33,16 @@ impl Map {
         return self.data[index];
     }
 
-    fn count_visible_trees(self: &Self, mut start: Coord,
+    fn mark_visible(self: &mut Self, x: usize, y: usize) {
+        let index = y * self.width + x;
+        self.visible[index] = true;
+    }
+
+    fn mark_visible_trees(self: &mut Self, start: Coord,
                            next_major: fn(&Self, &mut Coord) -> bool,
                            next_minor: fn(&Self, &mut Coord) -> bool,
                            reset_minor: fn(&Self, &mut Coord)
-    ) -> usize {
-        // Running count of visible trees
-        let mut count = 0;
+    ) {
         // Current coordinate that we're checking
         let mut coord = start;
         // Loop through major iterations
@@ -50,7 +53,7 @@ impl Map {
             loop {
                 let height = self.get(coord.x, coord.y);
                 if height > max_height {
-                    count += 1;
+                    self.mark_visible(coord.x, coord.y);
                     max_height = height;
                 }
                 // Update the minor coord
@@ -65,7 +68,6 @@ impl Map {
             // Reset the minor coord
             reset_minor(self, &mut coord);
         }
-        return count;
     }
 
     fn row_iterator(self: &Self, coord: &mut Coord) -> bool {
@@ -115,6 +117,7 @@ fn main() {
 
     let mut map = Map {
         data: Vec::new(),
+        visible: Vec::new(),
         width: 0,
         height: 0,
     };
@@ -140,7 +143,10 @@ fn main() {
             for c in line.chars() {
                 // Try to parse the char as an integer
                 match c.to_digit(10) {
-                    Some(num) => map.data.push(num + 1),
+                    Some(num) => {
+                        map.data.push(num + 1);
+                        map.visible.push(false);
+                    },
                     None => println!("Could not parse {} as integer", c),
                 };
             }
@@ -148,38 +154,34 @@ fn main() {
     }
 
     // Count visible trees by row, ltr
-    let visible_from_left = map.count_visible_trees(Coord { x: 0, y:0 },
-                                                    Map::row_iterator,
-                                                    Map::col_iterator,
-                                                    Map::reset_col,
+    map.mark_visible_trees(Coord { x: 0, y:0 },
+                            Map::row_iterator,
+                            Map::col_iterator,
+                            Map::reset_col,
     );
 
     // Count visible trees by row, rtl
-    let visible_from_right = map.count_visible_trees(Coord { x: map.width - 1, y:0 },
-                                                    Map::row_iterator,
-                                                    Map::col_iterator_rev,
-                                                    Map::reset_col_rev,
+    map.mark_visible_trees(Coord { x: map.width - 1, y:0 },
+                            Map::row_iterator,
+                            Map::col_iterator_rev,
+                            Map::reset_col_rev,
     );
 
     // Count visible trees by col, ttb
-    let visible_from_top = map.count_visible_trees(Coord { x: 0, y:0 },
-                                                    Map::col_iterator,
-                                                    Map::row_iterator,
-                                                    Map::reset_row,
+    map.mark_visible_trees(Coord { x: 0, y:0 },
+                           Map::col_iterator,
+                           Map::row_iterator,
+                           Map::reset_row,
     );
 
     // Count visible trees by col, btt
-    let visible_from_bottom = map.count_visible_trees(Coord { x: 0, y:0 },
-                                                    Map::col_iterator,
-                                                    Map::row_iterator_rev,
-                                                    Map::reset_row_rev,
+    map.mark_visible_trees(Coord { x: 0, y:0 },
+                           Map::col_iterator,
+                           Map::row_iterator_rev,
+                           Map::reset_row_rev,
     );
 
-    let total = 0 +
-        visible_from_left +
-        visible_from_right +
-        visible_from_top +
-        visible_from_bottom;
+    let total = map.visible.into_iter().filter(|x| *x).count();
 
     println!("Visible: {}", total);
 }
