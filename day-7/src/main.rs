@@ -8,12 +8,10 @@
 use std::fs::File;
 use std::path::Path;
 use std::io::{self, BufRead};
-use std::collections::HashSet;
 
 struct Node<'a> {
     name: &'a str,
-    parent: Option<&'a Node<'a>>,
-    next_sibling: Option<&'a Node<'a>>,
+    // parent: Option<&Node<'a>>,
     node_content: NodeContent<'a>,
 }
 
@@ -22,75 +20,77 @@ enum NodeContent<'a> {
         size: usize,
     },
     Directory {
-        first_child: Option<&'a Node<'a>>,
-        // last_child: Option<Node>,
+        children: Vec<&'a Node<'a>>,
     },
 }
 
-impl<'a> Iterator for Node<'a> {
-    type Item = &'a Node<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // If this is a directory then iterate through its children first,
-        // if there are any
-        if let NodeContent::Directory {first_child} = self.node_content {
-            if let Some(node) = first_child {
-                return Some(node);
-            }
-        }
-
-        // Otherwise iterate to the next sibling of this node
-        // if there is such a sibling
-        if let Some(node) = self.next_sibling {
-            return Some(node);
-        }
-        // Otherwise return to the parent level
-        return self.parent;
-    }
-}
-
-impl Node<'_> {
+impl<'a> Node<'a> {
     fn total_size(&self) -> usize {
-        match self.node_content {
-            NodeContent::File { size } => size,
-            NodeContent::Directory { first_child } => {
+        match &self.node_content {
+            NodeContent::File { size } => *size,
+            NodeContent::Directory { children } => {
                 let mut total_size = 0;
 
-                let mut child = first_child;
-                loop {
-                    match child {
-                        Some(node) => {
-                            total_size += node.total_size();
-                            child = node.next_sibling;
-                        },
-                        None => break,
-                    }
+                for node in children {
+                    total_size += node.total_size();
                 }
-                total_size
+
+                return total_size;
             }
         }
     }
-}
 
-// impl Node::Directory {
-//     fn add_child(&mut self, child: Node) {
-//         self.first_child = Some(child);
-//         child.parent = &self;
-//     }
-// }
+    fn new_dir(name: &'a str) -> Node<'a> {
+        Node {
+            name: name,
+            node_content: NodeContent::Directory {
+                children: Vec::new(),
+            }
+        }
+    }
+
+    fn new_file(name: &'a str, size: usize) -> Node<'a> {
+        Node {
+            name: name,
+            node_content: NodeContent::File {
+                size: size,
+            }
+        }
+    }
+
+    fn add_child(&mut self, child: &'a Node<'a>) {
+        if let NodeContent::File {..} = &self.node_content {
+            panic!("Cannot add child to file node");
+        }
+
+        if let NodeContent::Directory {ref mut children} = self.node_content {
+            children.push(child);
+        }
+    }
+
+    fn print_tree(&self, indentation: usize) {
+        println!("{}|-{}", " ".repeat(indentation * 2), self.name);
+        if let NodeContent::Directory {children} = &self.node_content {
+            for node in children {
+                node.print_tree(indentation + 1);
+            }
+        }
+    }
+
+
+}
 
 fn main() {
 
     // Build a file tree
 
-    let tree = Node {
-        name: "/",
-        next_sibling: None,
-        parent: None,
-        node_content: NodeContent::Directory {
-            first_child: None,
-        }
-    };
+    let mut tree = Node::new_dir("/");
+
+    let file = Node::new_file("foo", 123);
+
+    tree.add_child(&file);
+
+    tree.print_tree(0);
 
     let path = Path::new("input.txt");
 
