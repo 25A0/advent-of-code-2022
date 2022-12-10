@@ -51,13 +51,19 @@ fn main() {
         }
     }
 
-    let mut signal_sum: isize = 0;
-    for i in 0..6 {
-        let cycle = 20 + i * 40;
-        //  Read signal at cycle - 1, since the vector indexing starts at 0
-        let signal = signal_series[cycle - 1];
-        signal_sum += (cycle as isize) * signal;
+    // Loop over lines
+    for line in 0..6 {
+        // Loop over pixels
+        for pixel in 0..40 {
+            let cycle = 1 + line * 40 + pixel;
+            let reg_val = signal_series[cycle - 1];
+            if (reg_val - pixel as isize).abs() <= 1 {
+                // The sprite is in range, so we draw a #
+                print!("#");
+            } else {
+                print!(".");
+            }
+        }
+        println!();
     }
-
-    println!("Signal sum is {}", signal_sum);
 }
