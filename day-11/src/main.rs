@@ -5,10 +5,6 @@
 // through the file tree, and enumerate all nodes that are directories
 // and have a total size of < 10000.
 
-use std::fs::File;
-use std::path::Path;
-use std::io::{self, BufRead};
-
 struct Monkey {
     items: Vec<usize>,
     operation: Box<dyn Fn(usize) -> usize>,
@@ -19,18 +15,21 @@ struct Monkey {
 
 fn round(monkeys: &mut [Monkey], monkey_stats: &mut [usize]) {
     for m in 0..monkeys.len() {
-        for i in 0..monkeys[m].items.len() {
-            let mut item = 0;
-            let mut new_monkey_m = 0;
+        for _ in 0..monkeys[m].items.len() {
+            let mut item;
+            let new_monkey_m;
             { // Restrict scope of mutable monkey reference
-                let mut monkey = &mut monkeys[m];
+                let monkey = &mut monkeys[m];
                 // Remove the item from the front of the vector
                 item = monkey.items.remove(0);
                 // Update the worry level
                 item = (monkey.operation)(item);
 
                 // Relief: divide by three
-                item = item / 3;
+                // item = item / 3;
+
+                // Take the modulo of the product of all tests.
+                item = item % (17 * 2 * 5 * 3 * 7 * 13 * 19 * 11);
 
                 // Test the new worry level
                 new_monkey_m = if (monkey.test)(item) {
@@ -55,7 +54,7 @@ fn main() {
         Monkey {
             items: vec![54, 61, 97, 63, 74],
             operation: Box::new(|x| x * 7),
-            test: Box::new(|x| x % 117 == 0),
+            test: Box::new(|x| x % 17 == 0),
             test_pass_index: 5,
             test_fail_index: 3,
         },
@@ -112,10 +111,11 @@ fn main() {
 
     let mut monkey_stats = [0;8];
 
-    for i in 0..20 {
+    for _ in 0..10_000 {
         round(&mut monkeys, &mut monkey_stats);
     }
     monkey_stats.sort();
     monkey_stats.reverse();
     println!("Monkey business: {}", monkey_stats[0] * monkey_stats[1]);
+    println!("Monkey stats: {:?}", monkey_stats);
 }
